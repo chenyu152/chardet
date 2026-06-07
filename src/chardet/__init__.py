@@ -7,10 +7,13 @@ from collections.abc import Iterable
 from chardet._utils import (
     _DEFAULT_CHUNK_SIZE,
     DEFAULT_MAX_BYTES,
+    LOW_CONFIDENCE_THRESHOLD,
     MINIMUM_THRESHOLD,
+    LowConfidenceWarning,
     _resolve_prefer_superset,
     _validate_max_bytes,
     _warn_deprecated_chunk_size,
+    _warn_low_confidence,
 )
 from chardet._version import __version__
 from chardet.detector import UniversalDetector
@@ -22,11 +25,13 @@ from chardet.registry import _validate_encoding, normalize_encodings
 
 __all__ = [
     "DEFAULT_MAX_BYTES",
+    "LOW_CONFIDENCE_THRESHOLD",
     "MINIMUM_THRESHOLD",
     "DetectionDict",
     "DetectionResult",
     "EncodingEra",
     "LanguageFilter",
+    "LowConfidenceWarning",
     "UniversalDetector",
     "__version__",
     "detect",
@@ -47,6 +52,7 @@ def detect(  # noqa: PLR0913
     exclude_encodings: Iterable[str] | None = None,
     no_match_encoding: str = "cp1252",
     empty_input_encoding: str = "utf-8",
+    low_confidence_threshold: float = LOW_CONFIDENCE_THRESHOLD,
 ) -> DetectionDict:
     """Detect the encoding of the given byte string.
 
@@ -94,6 +100,7 @@ def detect(  # noqa: PLR0913
         apply_preferred_superset(result)
     if compat_names:
         apply_compat_names(result)
+    _warn_low_confidence(result, low_confidence_threshold)
     return result
 
 
@@ -111,6 +118,7 @@ def detect_all(  # noqa: PLR0913
     exclude_encodings: Iterable[str] | None = None,
     no_match_encoding: str = "cp1252",
     empty_input_encoding: str = "utf-8",
+    low_confidence_threshold: float = LOW_CONFIDENCE_THRESHOLD,
 ) -> list[DetectionDict]:
     """Detect all possible encodings of the given byte string.
 
@@ -164,6 +172,7 @@ def detect_all(  # noqa: PLR0913
         filtered = [d for d in dicts if d["confidence"] > MINIMUM_THRESHOLD]
         if filtered:
             dicts = filtered
+    _warn_low_confidence(dicts[0], low_confidence_threshold) if dicts else None
     for d in dicts:
         if prefer_superset:
             apply_preferred_superset(d)
