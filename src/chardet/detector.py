@@ -10,8 +10,10 @@ from typing import ClassVar
 from chardet import _utils
 from chardet._utils import (
     DEFAULT_MAX_BYTES,
+    LOW_CONFIDENCE_THRESHOLD,
     _resolve_prefer_superset,
     _validate_max_bytes,
+    _warn_low_confidence,
 )
 from chardet.enums import EncodingEra, LanguageFilter
 from chardet.output_names import (
@@ -60,6 +62,7 @@ class UniversalDetector:
         exclude_encodings: Iterable[str] | None = None,
         no_match_encoding: str = "cp1252",
         empty_input_encoding: str = "utf-8",
+        low_confidence_threshold: float = LOW_CONFIDENCE_THRESHOLD,
     ) -> None:
         """Initialize the detector.
 
@@ -112,6 +115,7 @@ class UniversalDetector:
         self._empty_input_encoding = _validate_encoding(
             empty_input_encoding, "empty_input_encoding"
         )
+        self._low_confidence_threshold = low_confidence_threshold
         self._buffer = bytearray()
         self._done = False
         self._closed = False
@@ -161,6 +165,7 @@ class UniversalDetector:
             )
             self._result = results[0]
             self._done = True
+            _warn_low_confidence(self._result.to_dict(), self._low_confidence_threshold)
         return self.result
 
     def reset(self) -> None:

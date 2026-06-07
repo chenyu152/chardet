@@ -10,6 +10,47 @@ DEFAULT_MAX_BYTES: int = 200_000
 #: Default minimum confidence threshold for filtering results.
 MINIMUM_THRESHOLD: float = 0.20
 
+
+#: Default confidence threshold below which a LowConfidenceWarning
+#: is emitted.
+LOW_CONFIDENCE_THRESHOLD: float = 0.50
+
+
+class LowConfidenceWarning(UserWarning):
+    """Emitted when the top detection result has a low confidence score.
+
+    Raised via warnings.warn when the confidence of the best
+    encoding detection result falls below LOW_CONFIDENCE_THRESHOLD.
+    Callers can control the threshold via the low_confidence_threshold
+    parameter on detect(), detect_all(), and UniversalDetector.
+
+    To silence these warnings::
+
+        import warnings
+        import chardet
+
+        warnings.filterwarnings("ignore", category=chardet.LowConfidenceWarning)
+    """
+
+
+def _warn_low_confidence(
+    result: dict[str, object],
+    threshold: float,
+    *,
+    stacklevel: int = 2,
+) -> None:
+    """Emit a LowConfidenceWarning if result confidence is below threshold."""
+    confidence = result.get("confidence", 0.0)
+    encoding = result.get("encoding")
+    if isinstance(confidence, (int, float)) and confidence < threshold:
+        warnings.warn(
+            f"Low confidence ({confidence:.2f}) in detection result "
+            f"for encoding {encoding!r}",
+            LowConfidenceWarning,
+            stacklevel=stacklevel,
+        )
+
+
 #: Default chunk_size value (deprecated, kept for backward-compat signatures).
 _DEFAULT_CHUNK_SIZE: int = 65_536
 
